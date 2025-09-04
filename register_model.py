@@ -43,27 +43,19 @@ with mlflow.start_run(run_name="Model Logging") as run:
     print(f"🏃 View run Model Logging at: http://127.0.0.1:5000/#/experiments/{run.info.experiment_id}/runs/{run.info.run_id}")
     print(f"🧪 View experiment at: http://127.0.0.1:5000/#/experiments/{run.info.experiment_id}")
 
-    # --- Transition to STAGING (mark as CHALLENGER) ---
+    # --- Use MlflowClient to get latest version info and add tags ---
     client = MlflowClient()
     model_name = "CreditCardFraudModel"
 
-    # Get the latest version of the registered model (with no stage yet)
-    latest_versions = client.get_latest_versions(model_name, stages=["None"])
+    # Get all versions of the model sorted by creation time (descending)
+    versions = client.search_model_versions(f"name='{model_name}'")
 
-    if not latest_versions:
-        raise ValueError(f"No un-staged versions found for model: {model_name}")
+    # Assume the latest version is the one you just registered
+    latest_version = max(versions, key=lambda v: int(v.version))
 
-    # Assume the latest version just registered is the first one
-    model_version = latest_versions[0].version
+    model_version = latest_version.version
 
-    # Transition to STAGING stage
-    client.transition_model_version_stage(
-        name=model_name,
-        version=model_version,
-        stage="Staging"
-    )
-
-    # Optional: Add a tag to mark it as "challenger"
+    # Instead of transitioning stages, just add tags for status and role
     client.set_model_version_tag(
         name=model_name,
         version=model_version,
@@ -71,4 +63,11 @@ with mlflow.start_run(run_name="Model Logging") as run:
         value="challenger"
     )
 
-    print(f"🚀 Model version {model_version} transitioned to STAGING (as Challenger)")
+    client.set_model_version_tag(
+        name=model_name,
+        version=model_version,
+        key="status",
+        value="staging"
+    )
+
+    print(f"🚀 Model version {model_version} tagged as 'challenger' and status 'staging'")
