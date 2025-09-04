@@ -8,7 +8,7 @@ on:
 jobs:
   Train:
     runs-on: ubuntu-latest
-
+    if: false
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
@@ -53,6 +53,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   Register:
+    if: false
     needs: Train
     runs-on: CREDITCARD
 
@@ -73,7 +74,7 @@ jobs:
         python register_model.py
 
   Champion-Selection:
-    needs: Register
+    # needs: Register
     runs-on: CREDITCARD
 
     steps:

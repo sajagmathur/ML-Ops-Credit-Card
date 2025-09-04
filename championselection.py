@@ -18,7 +18,8 @@ def get_production_model_version(model_name):
 def get_challenger_model_version(model_name):
     versions = client.search_model_versions(f"name='{model_name}'")
     for v in versions:
-        tags = client.get_model_version_tags(model_name, v.version)
+        model_version = client.get_model_version(name=model_name, version=v.version)
+        tags = model_version.tags  # Correct way to get tags
         if tags.get("role") == "challenger" and tags.get("status") == "staging":
             return v
     return None
