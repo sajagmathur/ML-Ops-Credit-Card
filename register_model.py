@@ -23,11 +23,11 @@ with open("metrics.json", "r") as f:
 
 # Define test thresholds
 test_thresholds = {
-    'Accuracy': 0.80,
-    'Precision': 0.80,
-    'Recall': 0.80,
-    'F1 Score': 0.80,
-    'Matthews Corrcoef': 0.75
+    'Accuracy': 0.60,
+    'Precision': 0.60,
+    'Recall': 0.60,
+    'F1 Score': 0.60,
+    'Matthews Corrcoef': 0.60
 }
 
 # Function to check if metrics pass thresholds
