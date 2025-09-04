@@ -21,53 +21,80 @@ model = joblib.load(model_path)
 with open("metrics.json", "r") as f:
     metrics = json.load(f)
 
-# Start MLflow run
-with mlflow.start_run(run_name="Model Logging") as run:
-    # Log model artifact and register it
-    mlflow.sklearn.log_model(
-        sk_model=model,
-        artifact_path="model",
-        registered_model_name="CreditCardFraudModel"
-    )
+# Define test thresholds
+test_thresholds = {
+    'Accuracy': 0.80,
+    'Precision': 0.80,
+    'Recall': 0.80,
+    'F1 Score': 0.80,
+    'Matthews Corrcoef': 0.75
+}
 
-    # Log metrics
-    for metric_name, value in metrics.items():
-        mlflow.log_metric(metric_name, value)
+# Function to check if metrics pass thresholds
+def tests_pass(metrics, thresholds):
+    for metric, threshold in thresholds.items():
+        value = metrics.get(metric)
+        if value is None:
+            print(f"⚠️ Metric '{metric}' not found in metrics.json")
+            return False
+        if value < threshold:
+            print(f"❌ Test failed: {metric} = {value:.4f} < threshold {threshold}")
+            return False
+    return True
 
-    # Log files as artifacts (optional)
-    mlflow.log_artifact("metrics.json")
-    mlflow.log_artifact("model.pkl")
+# Run tests before logging
+if tests_pass(metrics, test_thresholds):
+    print("✅ All tests passed. Proceeding with model logging and registration...")
 
-    print(f"\n✅ Model logged and registered in MLflow as 'CreditCardFraudModel'")
-    print(f"   Run ID: {run.info.run_id}")
-    print(f"🏃 View run Model Logging at: http://127.0.0.1:5000/#/experiments/{run.info.experiment_id}/runs/{run.info.run_id}")
-    print(f"🧪 View experiment at: http://127.0.0.1:5000/#/experiments/{run.info.experiment_id}")
+    with mlflow.start_run(run_name="Model Logging") as run:
+        # Log model artifact and register it
+        mlflow.sklearn.log_model(
+            sk_model=model,
+            artifact_path="model",
+            registered_model_name="CreditCardFraudModel"
+        )
 
-    # --- Use MlflowClient to get latest version info and add tags ---
-    client = MlflowClient()
-    model_name = "CreditCardFraudModel"
+        # Log metrics
+        for metric_name, value in metrics.items():
+            mlflow.log_metric(metric_name, value)
 
-    # Get all versions of the model sorted by creation time (descending)
-    versions = client.search_model_versions(f"name='{model_name}'")
+        # Log files as artifacts (optional)
+        mlflow.log_artifact("metrics.json")
+        mlflow.log_artifact("model.pkl")
 
-    # Assume the latest version is the one you just registered
-    latest_version = max(versions, key=lambda v: int(v.version))
+        print(f"\n✅ Model logged and registered in MLflow as 'CreditCardFraudModel'")
+        print(f"   Run ID: {run.info.run_id}")
+        print(f"🏃 View run Model Logging at: http://127.0.0.1:5000/#/experiments/{run.info.experiment_id}/runs/{run.info.run_id}")
+        print(f"🧪 View experiment at: http://127.0.0.1:5000/#/experiments/{run.info.experiment_id}")
 
-    model_version = latest_version.version
+        # Use MlflowClient to get latest version info and add tags
+        client = MlflowClient()
+        model_name = "CreditCardFraudModel"
 
-    # Instead of transitioning stages, just add tags for status and role
-    client.set_model_version_tag(
-        name=model_name,
-        version=model_version,
-        key="role",
-        value="challenger"
-    )
+        # Get all versions of the model sorted by creation time (descending)
+        versions = client.search_model_versions(f"name='{model_name}'")
 
-    client.set_model_version_tag(
-        name=model_name,
-        version=model_version,
-        key="status",
-        value="staging"
-    )
+        # Assume the latest version is the one you just registered
+        latest_version = max(versions, key=lambda v: int(v.version))
 
-    print(f"🚀 Model version {model_version} tagged as 'challenger' and status 'staging'")
+        model_version = latest_version.version
+
+        # Add tags for status and role
+        client.set_model_version_tag(
+            name=model_name,
+            version=model_version,
+            key="role",
+            value="challenger"
+        )
+
+        client.set_model_version_tag(
+            name=model_name,
+            version=model_version,
+            key="status",
+            value="staging"
+        )
+
+        print(f"🚀 Model version {model_version} tagged as 'challenger' and status 'staging'")
+
+else:
+    print("❌ Model failed the evaluation tests and will NOT be logged or registered.")
