@@ -2,7 +2,9 @@ import mlflow
 import mlflow.sklearn
 import json
 import joblib
-
+import sys
+import io
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 # MLflow tracking server URI
 mlflow.set_tracking_uri("http://192.168.29.15:5000/")
 mlflow.set_experiment("CreditCard_Fraud_Detection")
@@ -16,7 +18,7 @@ with open("metrics.json", "r") as f:
     metrics = json.load(f)
 
 # Start MLflow run
-with mlflow.start_run(run_name="Logged_Model_From_File") as run:
+with mlflow.start_run(run_name="Model Logging") as run:
     # Log model artifact
     mlflow.sklearn.log_model(model, artifact_path="model")
 
