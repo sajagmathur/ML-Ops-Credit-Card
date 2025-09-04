@@ -6,8 +6,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  Train-Register:
+  Train:
     runs-on: ubuntu-latest
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
@@ -32,3 +33,11 @@ jobs:
         SNOWFLAKE_SCHEMA: ${{ secrets.SNOWFLAKE_SCHEMA }}
       run: |
         python train_model.py
+
+    - name: Upload model and metrics artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: model-artifacts
+        path: |
+          model.pkl
+          metrics.json
