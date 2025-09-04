@@ -90,3 +90,23 @@ jobs:
         MLFLOW_TRACKING_URI: http://127.0.0.1:5000
       run: |
         python championselection.py
+
+  Inferencing:
+    needs: Champion-Selection
+    runs-on: CREDITCARD
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Run batch inference and save predictions locally
+      env:
+        SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+        SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+        SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+        SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+        SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
+        SNOWFLAKE_SCHEMA: ${{ secrets.SNOWFLAKE_SCHEMA }}
+
+      run: |
+        python inferencing.py
