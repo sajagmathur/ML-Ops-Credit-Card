@@ -1,5 +1,5 @@
-import json
 import os
+import json
 import pandas as pd
 import snowflake.connector
 from sklearn.model_selection import train_test_split
@@ -8,17 +8,21 @@ from sklearn.metrics import (
     accuracy_score, precision_score, recall_score,
     f1_score, matthews_corrcoef, confusion_matrix
 )
-import joblib
+import mlflow
+import mlflow.sklearn  # needed for logging sklearn models
 
 # Load credentials from environment variables
 account = os.getenv('SNOWFLAKE_ACCOUNT')
 user = os.getenv('SNOWFLAKE_USER')
 password = os.getenv('SNOWFLAKE_PASSWORD')
 warehouse = os.getenv('SNOWFLAKE_WAREHOUSE')
-database = os.getenv('SNOWFLAKE_DATABASE')  # should be 'CREDITCARD'
-schema = os.getenv('SNOWFLAKE_SCHEMA')      # should be 'PUBLIC'
+database = os.getenv('SNOWFLAKE_DATABASE')
+schema = os.getenv('SNOWFLAKE_SCHEMA')
 
-# Function to fetch data from original table
+# MLflow settings
+mlflow.set_tracking_uri("http://192.168.29.15:5000")  # Adjust if needed
+mlflow.set_experiment("CreditCard Fraud Detection")
+
 def fetch_data_from_snowflake():
     conn = snowflake.connector.connect(
         user=user,
@@ -34,77 +38,69 @@ def fetch_data_from_snowflake():
     conn.close()
     return df
 
-# Function to copy data to reference table
 def copy_reference_table():
     conn = snowflake.connector.connect(
         user=user,
         password=password,
         account=account,
         warehouse=warehouse,
-        database='CREDITCARD_REFERENCE',  # New target DB
+        database='CREDITCARD_REFERENCE',
         schema='PUBLIC'
     )
     cur = conn.cursor()
-
-    # Create or replace the reference table
     cur.execute("""
         CREATE OR REPLACE TABLE CREDITCARD_REFERENCE.PUBLIC.CREDITCARD_REFERENCE AS
         SELECT * FROM CREDITCARD.PUBLIC.CREDITCARD
     """)
-
     print("✅ Reference table copied to CREDITCARD_REFERENCE.PUBLIC.CREDITCARD_REFERENCE.")
     conn.close()
 
 def main():
-    # Step 1: Load data
     data = fetch_data_from_snowflake()
     print("✅ Data loaded from Snowflake. Shape:", data.shape)
 
-    # Step 2: Split features and target
     X = data.drop(['CLASS'], axis=1)
     y = data['CLASS']
-    print("\n🎯 Features shape:", X.shape)
-    print("🎯 Target shape:", y.shape)
+    print(f"🎯 Features shape: {X.shape}, Target shape: {y.shape}")
 
-    # Step 3: Train-test split
     xTrain, xTest, yTrain, yTest = train_test_split(X, y, test_size=0.2, random_state=42)
-    print("✅ Data split into train and test sets.")
+    print("✅ Data split into train/test sets.")
 
-    # Step 4: Train model
-    rfc = RandomForestClassifier()
-    rfc.fit(xTrain, yTrain)
-    print("✅ Random Forest model trained.")
+    with mlflow.start_run():
+        # Train model
+        model = RandomForestClassifier()
+        model.fit(xTrain, yTrain)
+        print("✅ Model trained.")
 
-    # Step 5: Evaluate model
-    yPred = rfc.predict(xTest)
-    metrics = {
-        'Accuracy': accuracy_score(yTest, yPred),
-        'Precision': precision_score(yTest, yPred),
-        'Recall': recall_score(yTest, yPred),
-        'F1 Score': f1_score(yTest, yPred),
-        'Matthews Corrcoef': matthews_corrcoef(yTest, yPred)
-    }
+        # Evaluate
+        yPred = model.predict(xTest)
+        metrics = {
+            'accuracy': accuracy_score(yTest, yPred),
+            'precision': precision_score(yTest, yPred),
+            'recall': recall_score(yTest, yPred),
+            'f1_score': f1_score(yTest, yPred),
+            'matthews_corrcoef': matthews_corrcoef(yTest, yPred)
+        }
 
-    print("\n📊 Model Evaluation Metrics:")
-    for metric, score in metrics.items():
-        print(f"{metric}: {score:.4f}")
+        # Log metrics to MLflow
+        for key, value in metrics.items():
+            mlflow.log_metric(key, value)
+            print(f"{key}: {value:.4f}")
 
-    # Confusion matrix
-    print("\n📉 Confusion Matrix:")
-    print(confusion_matrix(yTest, yPred))
+        print("\n📉 Confusion Matrix:")
+        print(confusion_matrix(yTest, yPred))
 
-    # Dump to JSON
-    with open("metrics.json", "w") as f:
-        json.dump(metrics, f, indent=4)
+        # Save metrics as local file too
+        with open("metrics.json", "w") as f:
+            json.dump(metrics, f, indent=4)
+        mlflow.log_artifact("metrics.json")
 
-    print("✅ Metrics dumped to metrics.json")
-    # Step 6: Save model
-    model_path = "model.pkl"
-    joblib.dump(rfc, model_path)
-    print(f"\n✅ Model saved to: {model_path}")
+        # Log model to MLflow and register it
+        mlflow.sklearn.log_model(model, "model", registered_model_name="creditcard-rf-model")
+        print("✅ Model logged and registered to MLflow.")
 
-    # Step 7: Copy reference dataset inside Snowflake
-    print("\n📤 Copying reference dataset in Snowflake...")
+    # Copy reference data
+    print("📤 Copying reference data to Snowflake...")
     copy_reference_table()
 
     print("\n🏁 All steps completed successfully.")
