@@ -53,13 +53,12 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   Register:
-    needs: Train  # Ensures this job runs AFTER the Train job
+    needs: Train
     runs-on: CREDITCARD
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
-
 
     - name: Download model artifacts
       uses: actions/download-artifact@v4
@@ -69,6 +68,26 @@ jobs:
 
     - name: Register model to MLflow
       env:
-        MLFLOW_TRACKING_URI: http://192.168.29.15:5000
+        MLFLOW_TRACKING_URI: http://127.0.0.1:5000
       run: |
         python register_model.py
+
+  Champion-Selection:
+    needs: Register
+    runs-on: CREDITCARD
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Download model artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: model-artifacts
+        path: .
+
+    - name: Run champion selection
+      env:
+        MLFLOW_TRACKING_URI: http://127.0.0.1:5000
+      run: |
+        python championselection.py
