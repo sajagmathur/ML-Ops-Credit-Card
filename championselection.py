@@ -1,6 +1,9 @@
 import mlflow
 from mlflow.tracking import MlflowClient
+import sys
+import io
 
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 # Define the metrics that challenger must beat champion on to become champion
 METRICS_TO_COMPARE = ['Accuracy', 'Precision', 'Recall', 'F1 Score', 'Matthews Corrcoef']
 
@@ -83,3 +86,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+#JustRun
