@@ -34,26 +34,6 @@ def fetch_data_from_snowflake():
     conn.close()
     return df
 
-# Function to copy data to reference table
-def copy_reference_table():
-    conn = snowflake.connector.connect(
-        user=user,
-        password=password,
-        account=account,
-        warehouse=warehouse,
-        database='CREDITCARD_REFERENCE',  # New target DB
-        schema='PUBLIC'
-    )
-    cur = conn.cursor()
-
-    # Create or replace the reference table
-    cur.execute("""
-        CREATE OR REPLACE TABLE CREDITCARD_REFERENCE.PUBLIC.CREDITCARD_REFERENCE AS
-        SELECT * FROM CREDITCARD.PUBLIC.CREDITCARD
-    """)
-
-    print("✅ Reference table copied to CREDITCARD_REFERENCE.PUBLIC.CREDITCARD_REFERENCE.")
-    conn.close()
 
 def main():
     # Step 1: Load data
@@ -103,10 +83,7 @@ def main():
     joblib.dump(rfc, model_path)
     print(f"\n✅ Model saved to: {model_path}")
 
-    # Step 7: Copy reference dataset inside Snowflake
-    print("\n📤 Copying reference dataset in Snowflake...")
-    copy_reference_table()
-
+    
     print("\n🏁 All steps completed successfully.")
 
 if __name__ == "__main__":

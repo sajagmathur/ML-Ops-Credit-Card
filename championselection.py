@@ -2,10 +2,40 @@ import mlflow
 from mlflow.tracking import MlflowClient
 import sys
 import io
+import snowflake.connector
+import os
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+
+# Snowflake credentials from environment variables
+account = os.getenv('SNOWFLAKE_ACCOUNT')
+user = os.getenv('SNOWFLAKE_USER')
+password = os.getenv('SNOWFLAKE_PASSWORD')
+warehouse = os.getenv('SNOWFLAKE_WAREHOUSE')
+
 # Define the metrics that challenger must beat champion on to become champion
 METRICS_TO_COMPARE = ['Accuracy', 'Precision', 'Recall', 'F1 Score', 'Matthews Corrcoef']
+
+def copy_reference_table():
+    print("\n📤 Copying reference dataset in Snowflake...")
+    conn = snowflake.connector.connect(
+        user=user,
+        password=password,
+        account=account,
+        warehouse=warehouse,
+        database='CREDITCARD_REFERENCE',  # New target DB
+        schema='PUBLIC'
+    )
+    cur = conn.cursor()
+
+    # Create or replace the reference table
+    cur.execute("""
+        CREATE OR REPLACE TABLE CREDITCARD_REFERENCE.PUBLIC.CREDITCARD_REFERENCE AS
+        SELECT * FROM CREDITCARD.PUBLIC.CREDITCARD
+    """)
+
+    print("✅ Reference table copied to CREDITCARD_REFERENCE.PUBLIC.CREDITCARD_REFERENCE.")
+    conn.close()
 
 def get_model_versions(client, model_name):
     return client.search_model_versions(f"name='{model_name}'")
@@ -56,6 +86,10 @@ def main():
         print("⚠️ No champion model found in production. Promoting challenger to production.")
         client.set_model_version_tag(model_name, challenger_version.version, "status", "production")
         client.set_model_version_tag(model_name, challenger_version.version, "role", "champion")
+        
+        # Copy Snowflake reference table since champion replaced
+        copy_reference_table()
+
         print(f"🚀 Challenger version {challenger_version.version} promoted to production as champion.")
         return
 
@@ -72,6 +106,7 @@ def main():
         challenger_val = challenger_metrics.get(metric, 'N/A')
         champion_val = champion_metrics.get(metric, 'N/A')
         print(f"{metric:<20} {str(challenger_val):<15} {str(champion_val):<15}")
+
     if better_than(challenger_metrics, champion_metrics):
         print(f"🚀 Challenger version {challenger_version.version} is better than champion version {champion_version.version}. Promoting challenger.")
         # Archive old champion by tag update
@@ -80,10 +115,13 @@ def main():
         # Promote challenger
         client.set_model_version_tag(model_name, challenger_version.version, "status", "production")
         client.set_model_version_tag(model_name, challenger_version.version, "role", "champion")
+        
+        # Copy Snowflake reference table since champion replaced
+        copy_reference_table()
+
         print(f"✅ Promotion complete.")
     else:
         print(f"⚠️ Challenger version {challenger_version.version} did NOT beat champion. No changes made.")
 
 if __name__ == "__main__":
     main()
-#JustRun

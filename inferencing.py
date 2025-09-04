@@ -5,6 +5,7 @@ import mlflow
 from mlflow.tracking import MlflowClient
 import sys
 import io
+
 # Fix Windows stdout encoding issue
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
@@ -20,11 +21,9 @@ SNOWFLAKE_SCHEMA = os.getenv('SNOWFLAKE_SCHEMA')
 MLFLOW_TRACKING_URI = "http://127.0.0.1:5000"
 MODEL_NAME = "CreditCardFraudModel"
 
-# Snowflake batch input table
+# Snowflake tables
 BATCH_INPUT_TABLE = f"{SNOWFLAKE_DATABASE}.{SNOWFLAKE_SCHEMA}.CREDITCARD_BATCH_INPUTS"
-
-# Local save path for CSV predictions
-LOCAL_SAVE_PATH = r"C:\Users\sajag\Desktop\Data_Split\batch_predictions.csv"
+BATCH_PREDICTIONS_TABLE = f"{SNOWFLAKE_DATABASE}.{SNOWFLAKE_SCHEMA}.BATCH_PREDICTIONS"
 
 
 def get_snowflake_connection():
@@ -94,17 +93,39 @@ def generate_predictions(df, model):
     return result_df
 
 
-def save_predictions_to_csv(df, filename=LOCAL_SAVE_PATH):
-    os.makedirs(os.path.dirname(filename), exist_ok=True)
-    df.to_csv(filename, index=False)
-    print(f"✅ Predictions saved locally to: {filename}")
+def save_predictions_to_snowflake(df):
+    conn = get_snowflake_connection()
+    cursor = conn.cursor()
+    try:
+        print(f"🧹 Truncating table {BATCH_PREDICTIONS_TABLE} before inserting new predictions.")
+        cursor.execute(f"TRUNCATE TABLE {BATCH_PREDICTIONS_TABLE}")
+        conn.commit()
+
+        print(f"⬆️ Inserting {len(df)} prediction rows into {BATCH_PREDICTIONS_TABLE}...")
+
+        # Prepare insert statement
+        cols = list(df.columns)
+        col_str = ', '.join(cols)
+        val_placeholders = ', '.join(['%s'] * len(cols))
+        insert_query = f"INSERT INTO {BATCH_PREDICTIONS_TABLE} ({col_str}) VALUES ({val_placeholders})"
+
+        # Convert dataframe to list of tuples
+        data_tuples = [tuple(x) for x in df.to_numpy()]
+
+        # Execute batch insert
+        cursor.executemany(insert_query, data_tuples)
+        conn.commit()
+        print("✅ Predictions saved to Snowflake table successfully.")
+    finally:
+        cursor.close()
+        conn.close()
 
 
 def main():
     batch_df = fetch_batch_data()
     model = get_champion_model()
     predictions_df = generate_predictions(batch_df, model)
-    save_predictions_to_csv(predictions_df)
+    save_predictions_to_snowflake(predictions_df)
     print("🏁 Batch inference pipeline completed successfully.")
 
 
