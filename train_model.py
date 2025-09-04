@@ -92,6 +92,11 @@ def main():
     print("\n📉 Confusion Matrix:")
     print(confusion_matrix(yTest, yPred))
 
+    # Dump to JSON
+    with open("metrics.json", "w") as f:
+        json.dump(metrics, f, indent=4)
+
+    print("✅ Metrics dumped to metrics.json")
     # Step 6: Save model
     model_path = "model.pkl"
     joblib.dump(rfc, model_path)
