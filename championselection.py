@@ -1,5 +1,11 @@
 import mlflow
 from mlflow.tracking import MlflowClient
+import sys
+import os
+import io
+
+if os.name == 'nt':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 # MLflow tracking server URI (adjust if needed)
 mlflow.set_tracking_uri("http://127.0.0.1:5000/")
