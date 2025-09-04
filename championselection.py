@@ -17,7 +17,7 @@ def get_model_version_metrics(client, model_name, version):
 def get_model_version_by_tag(client, model_name, tag_key, tag_value):
     versions = get_model_versions(client, model_name)
     for v in versions:
-        tags = client.get_model_version_tags(model_name, v.version)
+        tags = v.tags
         if tags.get(tag_key) == tag_value:
             return v
     return None
