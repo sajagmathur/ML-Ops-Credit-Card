@@ -4,7 +4,7 @@ import json
 import joblib
 import sys
 import io
-from mlflow.tracking import MlflowClient  # <-- Needed for transition
+from mlflow.tracking import MlflowClient
 
 # Fix Windows stdout encoding issue
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
@@ -24,7 +24,7 @@ with open("metrics.json", "r") as f:
 # Start MLflow run
 with mlflow.start_run(run_name="Model Logging") as run:
     # Log model artifact and register it
-    model_info = mlflow.sklearn.log_model(
+    mlflow.sklearn.log_model(
         sk_model=model,
         artifact_path="model",
         registered_model_name="CreditCardFraudModel"
@@ -40,12 +40,21 @@ with mlflow.start_run(run_name="Model Logging") as run:
 
     print(f"\n✅ Model logged and registered in MLflow as 'CreditCardFraudModel'")
     print(f"   Run ID: {run.info.run_id}")
-    print(f"   Model URI: {model_info.model_uri}")
+    print(f"🏃 View run Model Logging at: http://127.0.0.1:5000/#/experiments/{run.info.experiment_id}/runs/{run.info.run_id}")
+    print(f"🧪 View experiment at: http://127.0.0.1:5000/#/experiments/{run.info.experiment_id}")
 
     # --- Transition to STAGING (mark as CHALLENGER) ---
     client = MlflowClient()
-    model_name = model_info.name
-    model_version = model_info.version
+    model_name = "CreditCardFraudModel"
+
+    # Get the latest version of the registered model (with no stage yet)
+    latest_versions = client.get_latest_versions(model_name, stages=["None"])
+
+    if not latest_versions:
+        raise ValueError(f"No un-staged versions found for model: {model_name}")
+
+    # Assume the latest version just registered is the first one
+    model_version = latest_versions[0].version
 
     # Transition to STAGING stage
     client.transition_model_version_stage(
