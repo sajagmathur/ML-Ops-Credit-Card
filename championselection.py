@@ -60,7 +60,15 @@ def main():
 
     challenger_metrics = get_model_version_metrics(client, model_name, challenger_version.version)
     champion_metrics = get_model_version_metrics(client, model_name, champion_version.version)
-
+    
+    # Print metrics side-by-side
+    print("\n📊 Metrics Comparison:")
+    print(f"{'Metric':<20} {'Challenger':<15} {'Champion':<15}")
+    print("-" * 50)
+    for metric in METRICS_TO_COMPARE:
+        challenger_val = challenger_metrics.get(metric, 'N/A')
+        champion_val = champion_metrics.get(metric, 'N/A')
+        print(f"{metric:<20} {str(challenger_val):<15} {str(champion_val):<15}")
     if better_than(challenger_metrics, champion_metrics):
         print(f"🚀 Challenger version {challenger_version.version} is better than champion version {champion_version.version}. Promoting challenger.")
         # Archive old champion by tag update
