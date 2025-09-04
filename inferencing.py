@@ -9,7 +9,7 @@ import io
 # Fix Windows stdout encoding issue
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
-# Load Snowflake credentials from environment variables
+# Lo#ad Snowflake credentials from environment variables
 SNOWFLAKE_ACCOUNT = os.getenv('SNOWFLAKE_ACCOUNT')
 SNOWFLAKE_USER = os.getenv('SNOWFLAKE_USER')
 SNOWFLAKE_PASSWORD = os.getenv('SNOWFLAKE_PASSWORD')
