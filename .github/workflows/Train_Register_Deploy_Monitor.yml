@@ -99,7 +99,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Run batch inference and save predictions locally
+    - name: Run batch inference and save predictions on snowflake
       env:
         SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
         SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
@@ -110,3 +110,23 @@ jobs:
 
       run: |
         python inferencing.py
+  
+  Monitoring:
+    
+    needs: Inferencing
+    runs-on: CREDITCARD
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Run monitoring and log Evidently report to MLflow
+        env:
+          SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+          SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+          SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+          SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+          SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
+          SNOWFLAKE_SCHEMA: ${{ secrets.SNOWFLAKE_SCHEMA }}
+          MLFLOW_TRACKING_URI: http://127.0.0.1:5000  # Or your MLflow server URI
+        run: |
+          python monitor.py
