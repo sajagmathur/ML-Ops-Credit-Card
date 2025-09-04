@@ -9,16 +9,16 @@ from sklearn.metrics import (
 )
 import joblib
 
-# Read Snowflake credentials from environment variables
+# Load credentials from environment variables
 account = os.getenv('SNOWFLAKE_ACCOUNT')
 user = os.getenv('SNOWFLAKE_USER')
 password = os.getenv('SNOWFLAKE_PASSWORD')
 warehouse = os.getenv('SNOWFLAKE_WAREHOUSE')
-database = os.getenv('SNOWFLAKE_DATABASE')
-schema = os.getenv('SNOWFLAKE_SCHEMA')
+database = os.getenv('SNOWFLAKE_DATABASE')  # should be 'CREDITCARD'
+schema = os.getenv('SNOWFLAKE_SCHEMA')      # should be 'PUBLIC'
 
+# Function to fetch data from original table
 def fetch_data_from_snowflake():
-    # Establish connection to Snowflake
     conn = snowflake.connector.connect(
         user=user,
         password=password,
@@ -28,61 +28,80 @@ def fetch_data_from_snowflake():
         schema=schema
     )
     cur = conn.cursor()
-    # Replace 'your_table' with your actual table name
     cur.execute("SELECT * FROM CREDITCARD.PUBLIC.CREDITCARD")
     df = cur.fetch_pandas_all()
     conn.close()
     return df
 
-def main():
-    # Fetch data from Snowflake
-    data = fetch_data_from_snowflake()
-    print("Data loaded from Snowflake. Shape:", data.shape)
+# Function to copy data to reference table
+def copy_reference_table():
+    conn = snowflake.connector.connect(
+        user=user,
+        password=password,
+        account=account,
+        warehouse=warehouse,
+        database='CREDITCARD_REFERENCE',  # New target DB
+        schema='PUBLIC'
+    )
+    cur = conn.cursor()
 
-    # Prepare features and target
+    # Create or replace the reference table
+    cur.execute("""
+        CREATE OR REPLACE TABLE CREDITCARD_REFERENCE.PUBLIC.CREDITCARD_REFERENCE AS
+        SELECT * FROM CREDITCARD.PUBLIC.CREDITCARD
+    """)
+
+    print("✅ Reference table copied to CREDITCARD_REFERENCE.PUBLIC.CREDITCARD_REFERENCE.")
+    conn.close()
+
+def main():
+    # Step 1: Load data
+    data = fetch_data_from_snowflake()
+    print("✅ Data loaded from Snowflake. Shape:", data.shape)
+
+    # Step 2: Split features and target
     X = data.drop(['CLASS'], axis=1)
     y = data['CLASS']
-    print("\nFeature matrix shape:", X.shape)
-    print("Target vector shape:", y.shape)
+    print("\n🎯 Features shape:", X.shape)
+    print("🎯 Target shape:", y.shape)
 
-    # Train-test split
+    # Step 3: Train-test split
     xTrain, xTest, yTrain, yTest = train_test_split(X, y, test_size=0.2, random_state=42)
-    print("Split data into train and test sets:")
-    print("xTrain:", xTrain.shape, "xTest:", xTest.shape)
+    print("✅ Data split into train and test sets.")
 
-    # Train Random Forest Model
+    # Step 4: Train model
     rfc = RandomForestClassifier()
     rfc.fit(xTrain, yTrain)
-    print("\nRandom Forest model trained.")
+    print("✅ Random Forest model trained.")
 
-    # Predictions & evaluation
+    # Step 5: Evaluate model
     yPred = rfc.predict(xTest)
-    accuracy = accuracy_score(yTest, yPred)
-    precision = precision_score(yTest, yPred)
-    recall = recall_score(yTest, yPred)
-    f1 = f1_score(yTest, yPred)
-    mcc = matthews_corrcoef(yTest, yPred)
+    metrics = {
+        'Accuracy': accuracy_score(yTest, yPred),
+        'Precision': precision_score(yTest, yPred),
+        'Recall': recall_score(yTest, yPred),
+        'F1 Score': f1_score(yTest, yPred),
+        'Matthews Corrcoef': matthews_corrcoef(yTest, yPred)
+    }
 
-    print("\nModel Evaluation Metrics:")
-    print(f"Accuracy: {accuracy:.4f}")
-    print(f"Precision: {precision:.4f}")
-    print(f"Recall: {recall:.4f}")
-    print(f"F1-Score: {f1:.4f}")
-    print(f"Matthews Correlation Coefficient: {mcc:.4f}")
+    print("\n📊 Model Evaluation Metrics:")
+    for metric, score in metrics.items():
+        print(f"{metric}: {score:.4f}")
 
     # Confusion matrix
-    conf_matrix = confusion_matrix(yTest, yPred)
-    print("\nConfusion Matrix:")
-    print(conf_matrix)
+    print("\n📉 Confusion Matrix:")
+    print(confusion_matrix(yTest, yPred))
 
-    # Save the trained model
-    model_filename = "model.pkl"
-    joblib.dump(rfc, model_filename)
-    print(f"\nModel saved to {model_filename}")
+    # Step 6: Save model
+    model_path = "model.pkl"
+    joblib.dump(rfc, model_path)
+    print(f"\n✅ Model saved to: {model_path}")
 
+    # Step 7: Copy reference dataset inside Snowflake
+    print("\n📤 Copying reference dataset in Snowflake...")
+    copy_reference_table()
 
-    print("Model Training Complete, Saving Dataset as Reference to Snowflake")
-
+    print("\n🏁 All steps completed successfully.")
 
 if __name__ == "__main__":
     main()
