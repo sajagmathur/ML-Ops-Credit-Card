@@ -11,7 +11,7 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 # MLflow tracking server URI
 mlflow.set_tracking_uri("http://127.0.0.1:5000/")
-mlflow.set_experiment("CreditCard_Fraud_Detection")
+mlflow.set_experiment("CreditCard_Fraud_Detection_V1")
 
 # Load the trained model
 model_path = "model.pkl"
