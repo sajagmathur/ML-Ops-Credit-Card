@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 import snowflake.connector
 from sklearn.model_selection import train_test_split
@@ -8,13 +9,13 @@ from sklearn.metrics import (
 )
 import joblib
 
-# Snowflake credentials
-account = 'onmhvte-rm57820'
-user = 'SAJAGMATHUR'
-password = 'Thati10pur@719'
-warehouse = 'COMPUTE_WH'
-database = 'CREDITCARD'
-schema = 'PUBLIC'
+# Read Snowflake credentials from environment variables
+account = os.getenv('SNOWFLAKE_ACCOUNT')
+user = os.getenv('SNOWFLAKE_USER')
+password = os.getenv('SNOWFLAKE_PASSWORD')
+warehouse = os.getenv('SNOWFLAKE_WAREHOUSE')
+database = os.getenv('SNOWFLAKE_DATABASE')
+schema = os.getenv('SNOWFLAKE_SCHEMA')
 
 def fetch_data_from_snowflake():
     # Establish connection to Snowflake
@@ -81,7 +82,7 @@ def main():
 
 
     print("Model Training Complete, Saving Dataset as Reference to Snowflake")
-    
+
 
 if __name__ == "__main__":
     main()
