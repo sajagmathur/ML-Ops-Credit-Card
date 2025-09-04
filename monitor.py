@@ -5,7 +5,9 @@ from evidently.core.report import Report
 from evidently.presets import DataDriftPreset, ClassificationPreset
 from evidently import Dataset, DataDefinition
 import json
-
+import io
+import sys
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')  
 # Load Snowflake credentials from environment variables
 account = os.getenv('SNOWFLAKE_ACCOUNT')
 user = os.getenv('SNOWFLAKE_USER')
