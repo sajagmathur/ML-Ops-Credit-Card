@@ -84,14 +84,14 @@ if tests_pass(metrics, test_thresholds):
             name=model_name,
             version=model_version,
             key="role",
-            value="champion"
+            value="challenger"
         )
 
         client.set_model_version_tag(
             name=model_name,
             version=model_version,
             key="status",
-            value="production"
+            value="staging"
         )
 
         print(f"🚀 Model version {model_version} tagged as 'challenger' and status 'staging'")
