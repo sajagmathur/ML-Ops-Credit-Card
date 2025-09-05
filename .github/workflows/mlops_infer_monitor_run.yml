@@ -7,38 +7,29 @@ on:
 
 jobs:
   run-infer-monitor:
-    runs-on: CREDITCARD  # your local runner
+    runs-on: ubuntu-latest
 
     steps:
       - name: 🛎️ Checkout repo
         uses: actions/checkout@v3
 
-      - name: 🔐 Log in to Docker Hub
+      - name: 🐳 Log in to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: 📥 Pull the Docker image from Docker Hub
-        run: |
-          docker pull ${{ secrets.DOCKER_USERNAME }}/mlops-infer-monitor:latest
+        run: docker pull ${{ secrets.DOCKER_USERNAME }}/mlops-infer-monitor:latest
 
-      - name: 🚀 Run the Docker container and mount D:/Image
+      - name: 🚀 Run the Docker container
         run: |
-          docker run --rm --name mlops_infer_monitor_container ^
-            -e SNOWFLAKE_USER=${{ secrets.SNOWFLAKE_USER }} ^
-            -e SNOWFLAKE_PASSWORD=${{ secrets.SNOWFLAKE_PASSWORD }} ^
-            -e SNOWFLAKE_ACCOUNT=${{ secrets.SNOWFLAKE_ACCOUNT }} ^
-            -e SNOWFLAKE_WAREHOUSE=${{ secrets.SNOWFLAKE_WAREHOUSE }} ^
-            -e SNOWFLAKE_DATABASE=${{ secrets.SNOWFLAKE_DATABASE }} ^
-            -e SNOWFLAKE_SCHEMA=${{ secrets.SNOWFLAKE_SCHEMA }} ^
-            -e MLFLOW_TRACKING_URI=http://127.0.0.1:5000 ^
-            -v "D:\Image:/app/output" ^
+          docker run --rm \
+            -e SNOWFLAKE_USER=${{ secrets.SNOWFLAKE_USER }} \
+            -e SNOWFLAKE_PASSWORD=${{ secrets.SNOWFLAKE_PASSWORD }} \
+            -e SNOWFLAKE_ACCOUNT=${{ secrets.SNOWFLAKE_ACCOUNT }} \
+            -e SNOWFLAKE_WAREHOUSE=${{ secrets.SNOWFLAKE_WAREHOUSE }} \
+            -e SNOWFLAKE_DATABASE=${{ secrets.SNOWFLAKE_DATABASE }} \
+            -e SNOWFLAKE_SCHEMA=${{ secrets.SNOWFLAKE_SCHEMA }} \
+            -e MLFLOW_TRACKING_URI="https://1b4762015525.ngrok-free.app" \
             ${{ secrets.DOCKER_USERNAME }}/mlops-infer-monitor:latest
-
-      - name: 🧹 Cleanup Docker resources
-        if: always()
-        run: |
-          docker container prune -f || true
-          docker rmi -f ${{ secrets.DOCKER_USERNAME }}/mlops-infer-monitor:latest || true
-          docker system prune -f --volumes || true
