@@ -18,7 +18,6 @@ SNOWFLAKE_DATABASE = os.getenv('SNOWFLAKE_DATABASE')
 SNOWFLAKE_SCHEMA = os.getenv('SNOWFLAKE_SCHEMA')
 
 # MLflow tracking URI and model name
-MLFLOW_TRACKING_URI = "http://127.0.0.1:5000"
 MODEL_NAME = "CreditCardFraudModel"
 
 # Snowflake tables

@@ -9,19 +9,17 @@ import io
 import sys
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')  
 # Load Snowflake credentials from environment variables
-account = os.getenv('SNOWFLAKE_ACCOUNT')
-user = os.getenv('SNOWFLAKE_USER')
-password = os.getenv('SNOWFLAKE_PASSWORD')
-warehouse = os.getenv('SNOWFLAKE_WAREHOUSE')
-database = os.getenv('SNOWFLAKE_DATABASE')  # e.g. 'CREDITCARD'
-schema = os.getenv('SNOWFLAKE_SCHEMA')      # e.g. 'PUBLIC'
+account = 'onmhvte-rm57820'
+user = 'SAJAGMATHUR'
+password = 'Thati10pur@719'
+warehouse = 'COMPUTE_WH'
+database = 'CREDITCARD'
+schema = 'PUBLIC'
 
 # Snowflake tables
 REFERENCE_TABLE = 'CREDITCARD_REFERENCE.PUBLIC.CREDITCARD_REFERENCE'
 CURRENT_DATA_TABLE = 'CREDITCARD.PUBLIC.BATCH_PREDICTIONS'
 
-# Path to save retraining decision CSV
-RETRAINING_DECISION_PATH = r"C:\Users\sajag\Desktop\Data_Split\retraining_decision.csv"
 
 def fetch_data_from_snowflake(table_name):
     conn = snowflake.connector.connect(
@@ -55,11 +53,12 @@ def main():
     # For features, assume all except ID, target, prediction columns
     feature_columns = [col for col in reference_data.columns if col not in ['ID', target_column, prediction_column]]
 
-    # Define numerical features - here assuming all feature_columns are numerical
-    # Adjust if you have categorical features
+    # Force conversion of feature columns to numeric
+    reference_data[feature_columns] = reference_data[feature_columns].apply(pd.to_numeric, errors='coerce')
+    current_data[feature_columns] = current_data[feature_columns].apply(pd.to_numeric, errors='coerce')
+
     data_definition = DataDefinition(
         numerical_columns=feature_columns,
-        classification=[ClassificationPreset(target=target_column, prediction=prediction_column)]
     )
 
     # Create Evidently Dataset objects
@@ -71,6 +70,11 @@ def main():
     data_drift_report.run(reference_data=ref_dataset, current_data=cur_dataset)
     data_drift_metrics = data_drift_report.as_dict()
 
+    # Save HTML report for data drift
+    html_report_path = os.path.join(os.getcwd(), "monitoring_report.html")
+    data_drift_report.save_html(html_report_path)
+    print(f"✅ Data drift HTML report saved to {html_report_path}")
+
     data_drift_score = data_drift_metrics['metrics'][0]['result']['dataset_drift']
     print(f"Data Drift Score: {data_drift_score}")
 
@@ -78,6 +82,11 @@ def main():
     classification_report = Report(metrics=[ClassificationPreset()])
     classification_report.run(reference_data=ref_dataset, current_data=cur_dataset)
     classification_metrics = classification_report.as_dict()
+
+    # Save HTML report for classification
+    html_classification_path = os.path.join(os.getcwd(), "classification_report.html")
+    classification_report.save_html(html_classification_path)
+    print(f"✅ Classification HTML report saved to {html_classification_path}")
 
     # Extract F1 scores from classification report
     def get_f1_score(metrics_dict):
@@ -106,9 +115,24 @@ def main():
     print(f"🔔 Retraining Decision: {retrain}")
     print(f"📝 Rationale: {rationale}")
 
+    # Save retraining decision as CSV for MLflow artifact logging
     decision_df = pd.DataFrame({'Decision': [retrain], 'Rationale': [rationale]})
-    decision_df.to_csv(RETRAINING_DECISION_PATH, index=False)
-    print(f"✅ Retraining decision and rationale saved to {RETRAINING_DECISION_PATH}")
+    decision_csv_path = os.path.join(os.getcwd(), "retraining_decision.csv")
+    decision_df.to_csv(decision_csv_path, index=False)
+
+    # Log monitoring results to MLflow as a new experiment
+    import mlflow
+    mlflow.set_experiment("monitoring_experiment")
+    with mlflow.start_run(run_name="monitoring_run"):
+        mlflow.log_metric("data_drift_score", data_drift_score)
+        mlflow.log_metric("f1_reference", f1_reference if f1_reference is not None else 0)
+        mlflow.log_metric("f1_current", f1_current if f1_current is not None else 0)
+        mlflow.log_param("retrain_decision", retrain)
+        mlflow.log_param("rationale", rationale)
+        mlflow.log_artifact(html_report_path)
+        mlflow.log_artifact(html_classification_path)
+        mlflow.log_artifact(decision_csv_path)
+    print("✅ Monitoring results logged to MLflow experiment 'monitoring_experiment'")
 
 if __name__ == "__main__":
     main()
