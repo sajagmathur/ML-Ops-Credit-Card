@@ -7,12 +7,13 @@ from evidently import Dataset, DataDefinition
 import json
 import io
 import sys
+from evidently import BinaryClassification
+
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')  
 # Load Snowflake credentials from environment variables
 
 import mlflow
 import snowflake.connector
-
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score,
     f1_score, matthews_corrcoef
@@ -28,7 +29,7 @@ warehouse = os.getenv('SNOWFLAKE_WAREHOUSE')
 database = os.getenv('SNOWFLAKE_DATABASE')
 schema = os.getenv('SNOWFLAKE_SCHEMA')
 
-mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI"))
+mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI",'http://127.0.0.1:5000'))
 mlflow.set_experiment("Monitoring_Experiments_V1")
 
 def fetch_from_snowflake(query):
@@ -45,9 +46,10 @@ def load_champion_model():
     client = mlflow.tracking.MlflowClient()
     versions = client.search_model_versions("name = 'CreditCardFraudModel'")
     for v in versions:
-        if v.current_stage.lower() == "production" and v.tags.get("role") == "champion" and v.tags.get("status") == "production":
+        print(f"Version: {v.version}, Stage: {v.current_stage}, Tags: {v.tags}")
+        if v.tags.get("role") == "champion" and v.tags.get("status") == "production":
             print(f"Loaded model version: {v.version}")
-            return mlflow.sklearn.load_model(f"models:/CreditCardFraudModel/Production")
+            return mlflow.sklearn.load_model(f"models:/CreditCardFraudModel/{v.version}")
     raise Exception("No Champion model found in Production.")
 
 def calc_metrics(y_true, y_pred):
@@ -63,45 +65,64 @@ def main():
     model = load_champion_model()
 
     ref = fetch_from_snowflake("SELECT * FROM CREDITCARD_REFERENCE.PUBLIC.CREDITCARD_REFERENCE")
-    cur = fetch_from_snowflake("SELECT * FROM CREDITCARD.PUBLIC.BATCH_PREDICTIONS")
+    cur = fetch_from_snowflake("SELECT * FROM CREDITCARD.PUBLIC.CREDITCARD_BATCH_INPUTS")
     target = "CLASS"
 
-    ref["prediction"] = model.predict(ref.drop(columns=[target]))
-    cur["prediction"] = model.predict(cur.drop(columns=[target]))
+    # Only use original feature columns for prediction and monitoring
+    feature_cols = [col for col in ref.columns if col not in ['ID', 'CLASS', 'PREDICTION', 'PREDICTION_PROB']]
+    ref[feature_cols] = ref[feature_cols].apply(pd.to_numeric, errors='coerce')
+    cur[feature_cols] = cur[feature_cols].apply(pd.to_numeric, errors='coerce')
 
+    ref["prediction"] = model.predict(ref[feature_cols])
+    cur["prediction"] = model.predict(cur[feature_cols])
+
+    # dd = DataDefinition(
+    #     numerical_columns=feature_cols,
+    #     categorical_columns=None
+    # ) 
     dd = DataDefinition(
-        numerical_columns=[col for col in ref.drop(columns=[target]).columns],
-        categorical_columns=None,
-        target_columns=[target],
-        prediction_columns=["prediction"],
-        task="classification"
-    )
+    classification=[BinaryClassification(
+        target="CLASS",
+        prediction_labels="prediction")],
+    categorical_columns=["CLASS", "prediction"])
+
 
     ds_ref = Dataset.from_pandas(ref, data_definition=dd)
     ds_cur = Dataset.from_pandas(cur, data_definition=dd)
 
-    report = Report(metrics=[DataDriftPreset(), ClassificationPreset()])
-    report.run(reference_data=ds_ref, current_data=ds_cur)
-    report.save_html("evidently_report.html")
+    report = Report(metrics=[
+        DataDriftPreset(),
+        ClassificationPreset()
+    ])
+
+    result = report.run(reference_data=ds_ref, current_data=ds_cur)
+    output_path = "evidently_report.html"
+    result.save_html(output_path)
+    print("✅ Evidently report generated: evidently_report.html")
 
     ref_metrics = calc_metrics(ref[target], ref["prediction"])
     cur_metrics = calc_metrics(cur[target], cur["prediction"])
 
-    with open("metrics.json", "w") as f:
-        json.dump({"Reference": ref_metrics, "Current": cur_metrics}, f, indent=4)
-
-    degraded = [m for m in ref_metrics if cur_metrics[m] < 0.9 * ref_metrics[m]]
+    # Define degraded metrics based on threshold (example: accuracy drop > 0.05)
+    degraded = []
+    for k in ref_metrics:
+        if k in cur_metrics:
+            # Example threshold: 5% drop for accuracy, precision, recall, f1
+            if k in ["Accuracy", "Precision", "Recall", "F1_Score"]:
+                if ref_metrics[k] - cur_metrics[k] > 0.1:
+                    degraded.append(k)
     decision = "YES" if degraded else "NO"
-    rationale = f"Degraded metrics: {', '.join(degraded)}" if degraded else "All metrics within threshold."
+    rationale = f"Threshold: 10% Degradation. Degraded metrics: {', '.join(degraded)}" if degraded else "All metrics within threshold. Threshold: 10% Degradation. "
 
     pd.DataFrame({
         "Retraining_Decision": [decision],
         "Rationale": [rationale]
     }).to_csv("Retrain.csv", index=False)
 
+    
     with mlflow.start_run(run_name="Monitoring_Champion") as run:
         mlflow.log_artifact("evidently_report.html")
-        mlflow.log_artifact("metrics.json")
+        # mlflow.log_artifact("metrics.json")
         mlflow.log_artifact("Retrain.csv")
         for k,v in cur_metrics.items():
             mlflow.log_metric(f"Current_{k}", v)
