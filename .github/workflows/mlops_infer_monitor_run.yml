@@ -31,5 +31,5 @@ jobs:
             -e SNOWFLAKE_WAREHOUSE=${{ secrets.SNOWFLAKE_WAREHOUSE }} \
             -e SNOWFLAKE_DATABASE=${{ secrets.SNOWFLAKE_DATABASE }} \
             -e SNOWFLAKE_SCHEMA=${{ secrets.SNOWFLAKE_SCHEMA }} \
-            -e MLFLOW_TRACKING_URI="https://1b4762015525.ngrok-free.app" \
+            -e MLFLOW_TRACKING_URI="https://775cb90a6dd4.ngrok-free.app" \
             ${{ secrets.DOCKER_USERNAME }}/mlops-infer-monitor:latest
