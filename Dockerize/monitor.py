@@ -55,7 +55,7 @@ def insert_retraining_decision_to_snowflake(decision, rationale):
 
     insert_query = f"""
         INSERT INTO CREDITCARD.PUBLIC.RETRAIN (RETRAINING_DECISION, RATIONALE)
-        VALUES (%s, %s, %s)
+        VALUES (%s, %s)
     """
     cursor.execute(insert_query, (decision, rationale))
     conn.commit()
