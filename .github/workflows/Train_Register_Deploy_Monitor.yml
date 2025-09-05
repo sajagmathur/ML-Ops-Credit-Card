@@ -94,7 +94,21 @@ jobs:
           MLFLOW_TRACKING_URI: http://127.0.0.1:5000
         run: |
           python championselection.py
+      - name: Configure git for commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
+      - name: Commit and push champion_model.pkl if changed
+        run: |
+          git add champion_model.pkl
+          # Check if there are changes to commit
+          if ! git diff --cached --quiet; then
+            git commit -m "Update champion_model.pkl artifact [skip ci]"
+            git push
+          else
+            echo "No changes to champion_model.pkl, skipping commit."
+        fi
   Inferencing:
     needs: Champion-Selection
     runs-on: CREDITCARD
