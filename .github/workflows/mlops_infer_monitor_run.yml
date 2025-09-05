@@ -2,7 +2,7 @@ name: 🕒 Run MLOps Inference + Monitoring (Scheduled)
 
 on:
   schedule:
-    - cron: '*/30 * * * *'  # Every 30 minutes
+    - cron: '0 8 * * 1'  # At 08:00 AM UTC every Monday
   workflow_dispatch:
 
 jobs:
