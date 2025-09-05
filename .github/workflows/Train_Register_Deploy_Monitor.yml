@@ -148,7 +148,7 @@ jobs:
       - name: 🏗️ Build Docker image from Dockerize folder
         run: |
           docker build -t ${{ secrets.DOCKER_USERNAME }}/mlops-infer-monitor:latest \
-            -f ML-Ops-Credit-Card/Dockerize/Dockerfile \
+            -f Dockerize/Dockerfile \
             ML-Ops-Credit-Card/Dockerize
 
       - name: 📦 Push Docker image
