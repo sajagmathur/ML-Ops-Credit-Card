@@ -22,9 +22,11 @@ jobs:
       - name: 📥 Pull the Docker image from Docker Hub
         run: docker pull ${{ secrets.DOCKER_USERNAME }}/mlops-infer-monitor:latest
 
-      - name: 🚀 Run the Docker container
+      - name: 🚀 Run the Docker container with artifact mount
         run: |
+          mkdir -p artifacts  # Ensure artifacts directory exists
           docker run --rm \
+            -v ${{ github.workspace }}/artifacts:/app/artifacts \
             -e SNOWFLAKE_USER=${{ secrets.SNOWFLAKE_USER }} \
             -e SNOWFLAKE_PASSWORD=${{ secrets.SNOWFLAKE_PASSWORD }} \
             -e SNOWFLAKE_ACCOUNT=${{ secrets.SNOWFLAKE_ACCOUNT }} \
@@ -33,14 +35,14 @@ jobs:
             -e SNOWFLAKE_SCHEMA=${{ secrets.SNOWFLAKE_SCHEMA }} \
             -e MLFLOW_TRACKING_URI="https://775cb90a6dd4.ngrok-free.app" \
             ${{ secrets.DOCKER_USERNAME }}/mlops-infer-monitor:latest
-      
-      - name: Upload Artifacts to GitHub Actions
+
+      - name: 📤 Upload monitoring artifacts
         uses: actions/upload-artifact@v3
         with:
           name: monitoring-artifacts
           path: artifacts/
-      
-      - name: Commit artifacts back to repo
+
+      - name: 🔁 Commit artifacts back to repo
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
