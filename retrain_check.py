@@ -35,7 +35,7 @@ else:
 
     # Normalize decision_value to "YES" or "NO"
     print(f"Raw decision_value from Snowflake: {decision_value} (type: {type(decision_value)})")
-    if isinstance(decision_value, bool):
+    if isinstance(decision_value, (bool, np.bool_)):
         decision = "YES" if decision_value else "NO"
     elif isinstance(decision_value, (int, float)):
         decision = "YES" if decision_value == 1 else "NO"
