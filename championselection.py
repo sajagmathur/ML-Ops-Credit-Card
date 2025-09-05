@@ -137,7 +137,7 @@ def export_current_champion_model(model_name: str):
         return
     
     run_id = champion_version.run_id
-    model_uri = f"runs:/{run_id}/model.pkl"
+    model_uri = f"runs:/{run_id}/model"
 
     print(f"📥 Downloading champion model (version {champion_version.version}, run {run_id})...")
     local_model_path = mlflow.artifacts.download_artifacts(model_uri)
