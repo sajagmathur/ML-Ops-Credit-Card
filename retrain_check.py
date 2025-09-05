@@ -1,7 +1,7 @@
 import os
 import snowflake.connector
 import pandas as pd
-from datetime import datetime,timezone
+from datetime import datetime, timezone
 import sys
 import io
 
@@ -33,9 +33,17 @@ else:
     decision_value = df.iloc[0]['RETRAINING_DECISION']
     rationale = df.iloc[0]['RATIONALE']
 
+    # Normalize decision_value to "YES" or "NO"
     if isinstance(decision_value, bool):
-        # Map boolean to YES/NO
         decision = "YES" if decision_value else "NO"
+    elif isinstance(decision_value, (int, float)):
+        decision = "YES" if decision_value == 1 else "NO"
+    elif isinstance(decision_value, str):
+        decision = decision_value.strip().upper()
+        if decision in ["TRUE", "T", "1"]:
+            decision = "YES"
+        elif decision in ["FALSE", "F", "0"]:
+            decision = "NO"
     else:
         decision = str(decision_value).strip().upper()
 
@@ -50,9 +58,8 @@ else:
         update_query = f"""
         UPDATE CREDITCARD.PUBLIC.RETRAIN
         SET RETRAINING_DECISION = 'NO',
-            RATIONALE = 'Retrained at {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')} UTC',
-            
-        WHERE RETRAINING_DECISION = 'YES'
+            RATIONALE = 'Retrained at {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')} UTC'
+        WHERE RETRAINING_DECISION IN ('YES', 'TRUE', 'T', '1')
         """
         cursor.execute(update_query)
         conn.commit()
