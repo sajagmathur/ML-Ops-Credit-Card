@@ -100,6 +100,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Commit and push champion_model.pkl if changed
+        shell: bash
         run: |
           git add champion_model.pkl
           # Check if there are changes to commit
@@ -109,7 +110,7 @@ jobs:
           else
             echo "No changes to champion_model.pkl, skipping commit."
           fi
-          shell: bash
+          
   Inferencing:
     needs: Champion-Selection
     runs-on: CREDITCARD
