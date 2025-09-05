@@ -52,7 +52,8 @@ def insert_retraining_decision_to_snowflake(decision, rationale):
         database=database, schema=schema
     )
     cursor = conn.cursor()
-
+    cursor.execute("DELETE FROM CREDITCARD.PUBLIC.RETRAIN")
+    
     insert_query = f"""
         INSERT INTO CREDITCARD.PUBLIC.RETRAIN (RETRAINING_DECISION, RATIONALE)
         VALUES (%s, %s)
