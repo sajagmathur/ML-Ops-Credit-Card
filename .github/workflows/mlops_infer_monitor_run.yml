@@ -40,10 +40,10 @@ jobs:
           name: monitoring-artifacts
           path: artifacts/
       
-          - name: Commit artifacts back to repo
-      run: |
-        git config user.name "github-actions[bot]"
-        git config user.email "github-actions[bot]@users.noreply.github.com"
-        git add artifacts/
-        git commit -m "Auto-commit monitoring artifacts ($(date -u +'%Y-%m-%d %H:%M:%S UTC'))" || echo "No changes to commit"
-        git push
+      - name: Commit artifacts back to repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add artifacts/
+          git commit -m "Auto-commit monitoring artifacts ($(date -u +'%Y-%m-%d %H:%M:%S UTC'))" || echo "No changes to commit"
+          git push
