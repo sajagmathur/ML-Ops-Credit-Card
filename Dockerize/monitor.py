@@ -10,7 +10,7 @@ import sys
 from evidently import BinaryClassification
 import pickle
 from dotenv import load_dotenv
-
+from datetime import datetime
 # Load environment variables
 load_dotenv()
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')  
@@ -45,7 +45,24 @@ def fetch_from_snowflake(query):
     df = conn.cursor().execute(query).fetch_pandas_all()
     conn.close()
     return df
+def insert_retraining_decision_to_snowflake(decision, rationale):
+    conn = snowflake.connector.connect(
+        user=user, password=password,
+        account=account, warehouse=warehouse,
+        database=database, schema=schema
+    )
+    cursor = conn.cursor()
 
+    insert_query = f"""
+        INSERT INTO CREDITCARD.PUBLIC.RETRAIN (RETRAINING_DECISION, RATIONALE, TIMESTAMP)
+        VALUES (%s, %s, %s)
+    """
+    cursor.execute(insert_query, (decision, rationale, datetime.utcnow()))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    print("✅ Retraining decision inserted into Snowflake table: CREDITCARD.PUBLIC.RETRAIN")
+    
 def load_champion_model():
     model_path = "champion_model.pkl"
     if not os.path.exists(model_path):
@@ -123,6 +140,7 @@ def main():
         "Rationale": [rationale]
     }).to_csv("Retrain.csv", index=False)
 
+    insert_retraining_decision_to_snowflake(decision, rationale)
     
     with mlflow.start_run(run_name="Monitoring_Champion") as run:
         mlflow.log_artifact("evidently_report.html")
