@@ -29,6 +29,9 @@ df = cursor.execute(query).fetch_pandas_all()
 
 if df.empty:
     print("ℹ️ No records found in the retrain table.")
+    # Always set output for GitHub Actions
+    with open(os.environ.get('GITHUB_OUTPUT', 'github_output.txt'), 'a') as f:
+        f.write("retrain=false\n")
 else:
     decision_value = df.iloc[0]['RETRAINING_DECISION']
     rationale = df.iloc[0]['RATIONALE']
@@ -50,9 +53,8 @@ else:
 
     if decision == "YES":
         print("🔁 Retraining triggered based on decision YES.")
-
-        if decision == "YES":
-            print("::set-output name=retrain::true")
+        with open(os.environ.get('GITHUB_OUTPUT', 'github_output.txt'), 'a') as f:
+            f.write("retrain=true\n")
 
         # 2. Update the Snowflake table to mark retraining done
         update_query = f"""
@@ -67,6 +69,8 @@ else:
         print("✅ Retraining flag updated in Snowflake.")
     else:
         print("⏭️ No retraining required.")
+        with open(os.environ.get('GITHUB_OUTPUT', 'github_output.txt'), 'a') as f:
+            f.write("retrain=false\n")
 
 cursor.close()
 conn.close()

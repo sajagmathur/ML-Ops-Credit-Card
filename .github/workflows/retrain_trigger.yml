@@ -24,6 +24,7 @@ jobs:
         pip install snowflake-connector-python pandas
         pip install -r requirements.txt
     - name: Run retrain check script
+      id: check_retrain
       env:
         SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
         SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
@@ -34,13 +35,13 @@ jobs:
       run: python retrain_check.py
 
     - name: 🚀 Trigger CI/CD Retraining Workflow
-      if: success() && steps.check_retrain.outputs.retrain == 'true'  # optional condition
+      if: steps.check_retrain.outputs.retrain == 'true'
       uses: actions/github-script@v6
       with:
-      script: |
-        await github.rest.actions.createWorkflowDispatch({
-          owner: context.repo.owner,
-          repo: context.repo.repo,
-          workflow_id: 'mlops_infer_monitor_run.yml',  // Replace with your CI/CD workflow filename
-          ref: 'main'  // Replace with the branch you want to trigger on
-        });
+        script: |
+          await github.rest.actions.createWorkflowDispatch({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            workflow_id: 'mlops_infer_monitor_run.yml',
+            ref: 'main'
+          });
