@@ -108,7 +108,7 @@ jobs:
             git push
           else
             echo "No changes to champion_model.pkl, skipping commit."
-        fi
+          fi
   Inferencing:
     needs: Champion-Selection
     runs-on: CREDITCARD
