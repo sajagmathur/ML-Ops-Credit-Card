@@ -30,7 +30,7 @@ df = cursor.execute(query).fetch_pandas_all()
 if df.empty:
     print("ℹ️ No records found in the retrain table.")
 else:
-    decision = df.iloc[0]['RETRAINING_DECISION']
+    decision_value = df.iloc[0]['RETRAINING_DECISION']
     rationale = df.iloc[0]['RATIONALE']
 
     if isinstance(decision_value, bool):
