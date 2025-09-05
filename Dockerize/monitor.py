@@ -54,10 +54,10 @@ def insert_retraining_decision_to_snowflake(decision, rationale):
     cursor = conn.cursor()
 
     insert_query = f"""
-        INSERT INTO CREDITCARD.PUBLIC.RETRAIN (RETRAINING_DECISION, RATIONALE, TIMESTAMP)
+        INSERT INTO CREDITCARD.PUBLIC.RETRAIN (RETRAINING_DECISION, RATIONALE)
         VALUES (%s, %s, %s)
     """
-    cursor.execute(insert_query, (decision, rationale, datetime.utcnow()))
+    cursor.execute(insert_query, (decision, rationale))
     conn.commit()
     cursor.close()
     conn.close()
@@ -141,7 +141,7 @@ def main():
     }).to_csv("Retrain.csv", index=False)
 
     insert_retraining_decision_to_snowflake(decision, rationale)
-    
+
     with mlflow.start_run(run_name="Monitoring_Champion") as run:
         mlflow.log_artifact("evidently_report.html")
         # mlflow.log_artifact("metrics.json")
