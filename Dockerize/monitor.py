@@ -67,8 +67,8 @@ def calc_metrics(y_true, y_pred):
 def main():
     model = load_champion_model()
 
-    ref = fetch_from_snowflake(f"{database}.{schema}.CREDITCARD_REFERENCE")
-    cur = fetch_from_snowflake(f"{database}.{schema}.CREDITCARD_BATCH_INPUTS")
+    ref = fetch_from_snowflake(f"SELECT * FROM SELECT * FROM CREDITCARD_REFERENCE.PUBLIC.CREDITCARD_REFERENCE")
+    cur = fetch_from_snowflake(f"SELECT * FROM {database}.{schema}.CREDITCARD_BATCH_INPUTS")
     target = "CLASS"
 
     feature_cols = [col for col in ref.columns if col not in ['ID', 'CLASS', 'PREDICTION', 'PREDICTION_PROB']]

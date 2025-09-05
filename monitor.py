@@ -63,7 +63,7 @@ def calc_metrics(y_true, y_pred):
 def main():
     model = load_champion_model()
 
-    ref = fetch_from_snowflake(f"SELECT * FROM {database}.{schema}.CREDITCARD_REFERENCE")
+    ref = fetch_from_snowflake(f"SELECT * FROM CREDITCARD_REFERENCE.PUBLIC.CREDITCARD_REFERENCE")
     cur = fetch_from_snowflake(f"SELECT * FROM {database}.{schema}.CREDITCARD_BATCH_INPUTS")
     target = "CLASS"
 
