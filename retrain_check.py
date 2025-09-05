@@ -4,7 +4,7 @@ import pandas as pd
 from datetime import datetime, timezone
 import sys
 import io
-
+import numpy as np
 # Fix stdout encoding for Windows runners, ignore if not needed
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
