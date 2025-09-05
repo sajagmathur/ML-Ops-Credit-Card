@@ -106,9 +106,9 @@ jobs:
               New-Item -ItemType Directory -Path "Dockerize" | Out-Null
             }
             Copy-Item "champion_model.pkl" -Destination "Dockerize/champion_model.pkl" -Force
-            Write-Host "✅ champion_model.pkl copied to Dockerize folder"
+            Write-Host "champion_model.pkl copied to Dockerize folder"
           } else {
-            Write-Host "⚠️ champion_model.pkl not found, skipping copy"
+            Write-Host "champion_model.pkl not found, skipping copy"
           }
 
           git add champion_model.pkl
@@ -119,7 +119,7 @@ jobs:
             git pull --rebase origin main
             git push origin main
           } else {
-            Write-Host "ℹ️ No changes to commit"
+            Write-Host "No changes to commit"
           }
 
   Inferencing:
