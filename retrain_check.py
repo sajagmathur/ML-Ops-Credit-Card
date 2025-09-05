@@ -1,13 +1,14 @@
 import os
 import snowflake.connector
 import pandas as pd
-from datetime import datetime
+from datetime import datetime,timezone
 import sys
 import io
-# Fix Windows stdout encoding issue
+
+# Fix stdout encoding for Windows runners, ignore if not needed
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
-# Fetch Snowflake credentials from environment
+# Connect to Snowflake using environment variables
 conn = snowflake.connector.connect(
     user=os.environ['SNOWFLAKE_USER'],
     password=os.environ['SNOWFLAKE_PASSWORD'],
@@ -19,8 +20,13 @@ conn = snowflake.connector.connect(
 
 cursor = conn.cursor()
 
-# Fetch the latest retraining decision
-query = "SELECT * FROM CREDITCARD.PUBLIC.RETRAIN ORDER BY ROWID DESC LIMIT 1"
+# Select the latest retraining decision ordered by UPDATED_AT (timestamp column)
+query = """
+SELECT * FROM CREDITCARD.PUBLIC.RETRAIN
+ORDER BY UPDATED_AT DESC
+LIMIT 1
+"""
+
 df = cursor.execute(query).fetch_pandas_all()
 
 if df.empty:
@@ -32,15 +38,16 @@ else:
     if decision == "YES":
         print("🔁 Retraining triggered based on decision YES.")
 
-        # 1. Write the retrain.txt file
+        # 1. Write retrain.txt
         with open("retrain.txt", "w") as f:
             f.write("Retraining")
 
-        # 2. Update the Snowflake table
+        # 2. Update the Snowflake table to mark retraining done
         update_query = f"""
         UPDATE CREDITCARD.PUBLIC.RETRAIN
         SET RETRAINING_DECISION = 'NO',
-            RATIONALE = 'Retrained at {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC'
+            RATIONALE = 'Retrained at {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')} UTC',
+            UPDATED_AT = CURRENT_TIMESTAMP()
         WHERE RETRAINING_DECISION = 'YES'
         """
         cursor.execute(update_query)
@@ -49,3 +56,6 @@ else:
         print("✅ Retraining flag updated in Snowflake.")
     else:
         print("⏭️ No retraining required.")
+
+cursor.close()
+conn.close()
