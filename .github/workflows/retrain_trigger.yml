@@ -33,14 +33,14 @@ jobs:
         SNOWFLAKE_SCHEMA: ${{ secrets.SNOWFLAKE_SCHEMA }}
       run: python retrain_check.py
 
-    - name: Commit and push retrain.txt if exists
-      run: |
-        if [ -f retrain.txt ]; then
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add retrain.txt
-          git commit -m "Add retrain.txt - triggered retraining"
-          git push
-        else
-          echo "No retrain.txt file to commit."
-        fi
+    - name: 🚀 Trigger CI/CD Retraining Workflow
+      if: success() && steps.check_retrain.outputs.retrain == 'true'  # optional condition
+      uses: actions/github-script@v6
+      with:
+      script: |
+        await github.rest.actions.createWorkflowDispatch({
+          owner: context.repo.owner,
+          repo: context.repo.repo,
+          workflow_id: 'mlops_infer_monitor_run.yml',  // Replace with your CI/CD workflow filename
+          ref: 'main'  // Replace with the branch you want to trigger on
+        });

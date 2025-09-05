@@ -51,9 +51,8 @@ else:
     if decision == "YES":
         print("🔁 Retraining triggered based on decision YES.")
 
-        # 1. Write retrain.txt
-        with open("retrain.txt", "w") as f:
-            f.write("Retraining")
+        if decision == "YES":
+            print("::set-output name=retrain::true")
 
         # 2. Update the Snowflake table to mark retraining done
         update_query = f"""
