@@ -6,9 +6,9 @@ import snowflake.connector
 import os
 import shutil
 
-print("🚀 championselection.py script started")
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+print("🚀 championselection.py script started")
 # Snowflake credentials from environment variables
 account = os.getenv('SNOWFLAKE_ACCOUNT')
 user = os.getenv('SNOWFLAKE_USER')
