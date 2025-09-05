@@ -4,7 +4,9 @@ import sys
 import io
 import snowflake.connector
 import os
+import shutil
 
+print("🚀 championselection.py script started")
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 # Snowflake credentials from environment variables
@@ -123,3 +125,30 @@ def main():
     else:
         print(f"⚠️ Challenger version {challenger_version.version} did NOT beat champion. No changes made.")
 
+def export_current_champion_model(model_name: str):
+    """Download the current champion model.pkl and save it as champion_model.pkl locally."""
+    mlflow.set_tracking_uri("http://127.0.0.1:5000")  # Or your actual URI
+    client = MlflowClient()
+    
+    # Get current champion
+    champion_version = get_model_version_by_tag(client, model_name, "status", "production")
+    if not champion_version:
+        print("❌ No champion model in production.")
+        return
+    
+    run_id = champion_version.run_id
+    model_uri = f"runs:/{run_id}/model.pkl"
+
+    print(f"📥 Downloading champion model (version {champion_version.version}, run {run_id})...")
+    local_model_path = mlflow.artifacts.download_artifacts(model_uri)
+    model_file = os.path.join(local_model_path, "model.pkl")
+
+    if not os.path.exists(model_file):
+        raise FileNotFoundError("Champion model.pkl not found in artifacts.")
+
+    shutil.copy(model_file, "champion_model.pkl")
+    print("✅ Champion model saved as champion_model.pkl.")
+
+if __name__ == "__main__":
+    main()
+    export_current_champion_model("CreditCardFraudModel")
