@@ -149,7 +149,7 @@ jobs:
         run: |
           docker build -t ${{ secrets.DOCKER_USERNAME }}/mlops-infer-monitor:latest \
             -f Dockerize/Dockerfile \
-            ML-Ops-Credit-Card/Dockerize
+            Dockerize
 
       - name: 📦 Push Docker image
         run: |
