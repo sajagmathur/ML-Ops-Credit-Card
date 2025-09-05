@@ -23,8 +23,6 @@ cursor = conn.cursor()
 # Select the latest retraining decision ordered by UPDATED_AT (timestamp column)
 query = """
 SELECT * FROM CREDITCARD.PUBLIC.RETRAIN
-ORDER BY UPDATED_AT DESC
-LIMIT 1
 """
 
 df = cursor.execute(query).fetch_pandas_all()
@@ -47,7 +45,7 @@ else:
         UPDATE CREDITCARD.PUBLIC.RETRAIN
         SET RETRAINING_DECISION = 'NO',
             RATIONALE = 'Retrained at {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')} UTC',
-            UPDATED_AT = CURRENT_TIMESTAMP()
+            
         WHERE RETRAINING_DECISION = 'YES'
         """
         cursor.execute(update_query)
